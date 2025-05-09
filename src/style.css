@@ -1,0 +1,72 @@
+/* Custom styles for the attendance tracker app */
+
+/* Base styles */
+body {
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Custom scrollbar styles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(107, 114, 128, 0.5);
+}
+
+/* Animation for notifications */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+#toast-container > div {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+/* Tab navigation styles */
+#tabs a.active {
+  font-weight: 500;
+}
+
+/* Make tables more responsive */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Add active state for buttons */
+button:active, 
+a:active {
+  transform: scale(0.98);
+}
+
+/* Print styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-section, .print-section * {
+    visibility: visible;
+  }
+  .print-section {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

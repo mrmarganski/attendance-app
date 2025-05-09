@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Attendance Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#E83142',
+            dark: {
+              DEFAULT: '#181818',
+              light: '#222222',
+              lighter: '#333333'
+            }
+          },
+          fontFamily: {
+            'roboto': ['Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  
+  <!-- Your custom styles -->
+  <link rel="stylesheet" href="/src/css/styles.css">
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200">
+  <div class="container mx-auto px-4 py-8 max-w-6xl">
+    <header class="mb-8 flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-bold text-primary dark:text-primary mb-2">Pomperaug Robotics Team 2064</h1>
+        <p class="text-gray-600 dark:text-gray-400">Attendance Tracking System</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Admin indicator -->
+        <div id="admin-status-indicator" class="hidden text-sm text-green-500 dark:text-green-400 mr-3 flex items-center gap-2">
+          <span class="flex items-center">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+            Admin
+          </span>
+          <button id="admin-logout" class="px-2 py-0.5 bg-red-500 text-white text-xs rounded hover:bg-opacity-90">
+            Logout
+          </button>
+        </div>
+        
+        <button id="end-meeting" class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-opacity-90 flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7M19 13v6a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h5"></path>
+          </svg>
+          End Meeting
+        </button>
+        
+        <span class="text-sm text-gray-500 dark:text-gray-400 mr-2" id="date-display"></span>
+        <button id="theme-toggle" class="p-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tabs Navigation -->
+    <nav class="mb-8">
+      <div id="tabs" class="flex border-b border-gray-200 dark:border-gray-700">
+        <a href="#" data-tab="check-in" class="py-2 px-4 border-b-2 border-primary text-primary active">Check-In</a>
+        <a href="#" data-tab="students" class="py-2 px-4 border-b-2 border-transparent hover:border-gray-300">Students</a>
+        <a href="#" data-tab="badges" class="py-2 px-4 border-b-2 border-transparent hover:border-gray-300">ID Badges</a>
+        <a href="#" data-tab="attendance" class="py-2 px-4 border-b-2 border-transparent hover:border-gray-300">Attendance History</a>
+        <a href="#" data-tab="admin" class="py-2 px-4 border-b-2 border-transparent hover:border-gray-300">Admin</a>
+      </div>
+    </nav>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Check-In Tab -->
+      <div id="check-in" class="tab-pane">
+        <div class="flex flex-col md:flex-row gap-8">
+          <!-- Left Column - Check-In Form -->
+          <div class="md:w-1/3">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+              <h2 class="text-xl font-semibold mb-4">Student Check-In</h2>
+              <p class="text-gray-600 dark:text-gray-400 mb-4" id="current-date"></p>
+              
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="student-id-input">Student ID</label>
+                  <div class="flex">
+                    <input type="text" id="student-id-input" class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base" placeholder="Enter ID or scan badge">
+                    <button id="check-in-manual" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-r-md">
+                      Check In
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium mb-1" for="student-quick-select">Quick Select Student</label>
+                  <select id="student-quick-select" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base">
+                    <option value="">Select a student...</option>
+                    <!-- Student options will be populated by JavaScript -->
+                  </select>
+                </div>
+                
+                <div id="absence-reason-container" class="hidden">
+                  <label class="block text-sm font-medium mb-1" for="absence-reason">Reason for Absence</label>
+                  <select id="absence-reason" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base mb-2">
+                    <option value="Sick">Sick</option>
+                    <option value="Family Commitment">Family Commitment</option>
+                    <option value="School Event">School Event</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Other Extracurricular">Other Extracurricular</option>
+                    <option value="Transportation">Transportation</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <button id="mark-absent" class="w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-opacity-90">
+                    Mark Absent
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-6 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+              <h3 class="font-medium mb-2">Last Activity</h3>
+              <div id="last-activity" class="text-sm text-gray-600 dark:text-gray-400">
+                No recent activity
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right Column - Attendance Lists -->
+          <div class="md:w-2/3">
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-lg mb-6">
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Today's Attendance</h2>
+                <div class="flex flex-wrap space-x-2">
+                  <div class="flex items-center">
+                    <span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-1"></span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Present: </span>
+                    <span id="present-count" class="ml-1 font-semibold">0</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-1"></span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Absent: </span>
+                    <span id="absent-count" class="ml-1 font-semibold">0</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-1"></span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Total: </span>
+                    <span id="total-students" class="ml-1 font-semibold">3</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Admin Edit Controls -->
+              <div class="flex justify-end mb-3">
+                <button id="toggle-edit-mode" class="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-opacity-90 flex items-center">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                  </svg>
+                  Enable Admin Edit
+                </button>
+              </div>
+              
+              <!-- Attendance Tabs -->
+              <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
+                <div class="flex">
+                  <button data-attendance-tab="present" class="px-4 py-2 border-b-2 border-primary text-primary active mr-4">
+                    Present
+                  </button>
+                  <button data-attendance-tab="absent" class="px-4 py-2 border-b-2 border-transparent hover:text-gray-600 dark:hover:text-gray-300 mr-4">
+                    Absent
+                  </button>
+                  <button data-attendance-tab="all" class="px-4 py-2 border-b-2 border-transparent hover:text-gray-600 dark:hover:text-gray-300">
+                    All Students
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Present Students Tab -->
+              <div id="present-tab" class="attendance-tab-content">
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Student</th>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Check-In/Out</th>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="check-in-list" class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                      <!-- Check-in list will be populated by JavaScript -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <!-- Absent Students Tab -->
+              <div id="absent-tab" class="attendance-tab-content hidden">
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Student</th>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Reason</th>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="absent-list" class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                      <!-- Absent list will be populated by JavaScript -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <!-- All Students Tab -->
+              <div id="all-tab" class="attendance-tab-content hidden">
+                <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Student</th>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Status</th>
+                        <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="all-students-list" class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                      <!-- All students list will be populated by JavaScript -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Students Tab -->
+      <div id="students" class="tab-pane hidden">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
+          <h2 class="text-xl font-semibold mb-4">Student Management</h2>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">ID</th>
+                  <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Name</th>
+                  <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Grade</th>
+                  <th class="py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider px-6">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="student-list" class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                <!-- Student list will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mt-6">
+          <h3 class="text-lg font-semibold mb-4" id="student-form-title">Add New Student</h3>
+          <input type="hidden" id="edit-student-id">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium mb-1" for="student-id-field">Student ID</label>
+              <input type="text" id="student-id-field" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1" for="first-name">First Name</label>
+              <input type="text" id="first-name" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1" for="last-name">Last Name</label>
+              <input type="text" id="last-name" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1" for="grade">Grade</label>
+              <select id="grade" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option value="">Select Grade...</option>
+                <option value="Grade 9">Grade 9</option>
+                <option value="Grade 10">Grade 10</option>
+                <option value="Grade 11">Grade 11</option>
+                <option value="Grade 12">Grade 12</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex justify-end space-x-2">
+            <button id="cancel-edit" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white rounded hover:bg-opacity-90 hidden">
+              Cancel
+            </button>
+            <button id="save-student" class="px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90">
+              Add Student
+            </button>
+          </div>
+        </div>
+        
+        <div class="flex space-x-2 mt-4 mb-6">
+          <button id="import-students" class="text-sm px-3 py-1 bg-blue-500 text-white rounded hover:bg-opacity-90">
+            Import Students (CSV)
+          </button>
+        </div>
+      </div>
+      
+      <!-- Badges Tab -->
+      <div id="badges" class="tab-pane hidden">
+        <h2 class="text-xl font-semibold mb-4">ID Badges Generator</h2>
+        <p>Badge generation features will be added here.</p>
+      </div>
+      
+      <!-- Attendance History Tab -->
+      <div id="attendance" class="tab-pane hidden">
+        <h2 class="text-xl font-semibold mb-4">Attendance History</h2>
+        <p>Attendance history features will be added here.</p>
+      </div>
+      
+      <!-- Admin Tab -->
+      <div id="admin" class="tab-pane hidden">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
+          <h2 class="text-xl font-semibold mb-4">Admin Panel</h2>
+          
+          <button id="admin-login-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-opacity-90 mb-4">
+            Admin Login
+          </button>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <h3 class="font-medium mb-2">System Settings</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Configure system-wide settings</p>
+              <button id="show-settings" class="text-sm px-3 py-1 bg-blue-500 text-white rounded hover:bg-opacity-90">
+                Update Settings
+              </button>
+            </div>
+            
+            <div class="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <h3 class="font-medium mb-2">Data Management</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Backup, restore, or export data</p>
+              <div class="flex space-x-2">
+                <button id="export-data" class="text-sm px-3 py-1 bg-blue-500 text-white rounded hover:bg-opacity-90">
+                  Export Data
+                </button>
+                <button id="import-data" class="text-sm px-3 py-1 bg-green-500 text-white rounded hover:bg-opacity-90">
+                  Import Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mt-6">
+          <h3 class="text-lg font-semibold mb-4">System Settings</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium mb-1" for="admin-password-field">Admin Password</label>
+              <div class="relative">
+                <input type="password" id="admin-password-field" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 px-3 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Leave blank to keep current password</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1" for="badge-title">Badge Title</label>
+              <input type="text" id="badge-title" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" value="Pomperaug Robotics Team 2064">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1" for="badge-year">Badge Year</label>
+              <input type="text" id="badge-year" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" value="2023-2024">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1" for="badge-color">Badge Color</label>
+              <input type="color" id="badge-color" class="w-full h-10 px-1 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" value="#E83142">
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="save-local" class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded" checked>
+              <label for="save-local" class="ml-2 text-sm">Save data locally</label>
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button id="update-settings" class="px-4 py-2 bg-primary text-white rounded hover:bg-opacity-90">
+              Update Settings
+            </button>
+          </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mt-6">
+          <h3 class="text-lg font-semibold mb-4">Data Management</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="font-medium mb-2">Import/Export</h4>
+              <div class="space-y-2">
+                <button id="export-data-2" class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-opacity-90">
+                  Export Data
+                </button>
+                <button id="import-data-2" class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-opacity-90">
+                  Import Data
+                </button>
+              </div>
+            </div>
+            <div>
+              <h4 class="font-medium mb-2">Clear Data</h4>
+              <div class="space-y-2">
+                <button id="clear-attendance" class="w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-opacity-90">
+                  Clear All Attendance
+                </button>
+                <button id="clear-students" class="w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-opacity-90">
+                  Delete All Students
+                </button>
+                <button id="clear-logs" class="w-full px-4 py-2 bg-yellow-500 text-white rounded hover:bg-opacity-90">
+                  Clear Activity Logs
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mt-6">
+          <h3 class="text-lg font-semibold mb-4">Activity Log</h3>
+          <div class="max-h-64 overflow-y-auto custom-scrollbar">
+            <ul id="activity-log" class="space-y-1 text-sm">
+              <!-- Activity log will be populated by JavaScript -->
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div id="admin-login-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+      <h3 class="text-lg font-semibold mb-4">Admin Login</h3>
+      <form id="admin-login-form">
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1" for="admin-password">Password</label>
+          <div class="relative">
+            <input type="password" id="admin-password" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-900 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+            <button type="button" id="login-password-toggle" class="absolute inset-y-0 right-0 px-3 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </button>
+          </div>
+          <p id="admin-login-error" class="text-red-500 text-sm mt-1 hidden"></p>
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button type="button" id="cancel-admin-login" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white rounded hover:bg-opacity-90">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-opacity-90">
+            Login
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
+      <h3 class="text-lg font-semibold mb-2" id="confirm-title">Confirm Action</h3>
+      <p class="mb-4 text-gray-600 dark:text-gray-400" id="confirm-message">Are you sure you want to proceed?</p>
+      <div class="flex justify-end space-x-2">
+        <button id="confirm-cancel" class="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-white rounded hover:bg-opacity-90">
+          Cancel
+        </button>
+        <button id="confirm-proceed" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-opacity-90">
+          Proceed
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container for notifications -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2"></div>
+
+  <!-- Print area (hidden) -->
+  <div id="print-area" class="hidden"></div>
+
+  <!-- Script import handled by Vite -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
